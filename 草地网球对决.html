@@ -1,0 +1,929 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>草地网球对决</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-screen portrait app — scoreboard on top, a vertical grass court filling the rest, controls tucked under. Single deliberate look: evening grass court. */
+:root {
+  --surround: #0d2318;
+  --board: #10301f;
+  --board-edge: #24503a;
+  --cream: #efe9d6;
+  --muted: #94ad9c;
+  --ball: #d8ee3a;
+  --violet: #7a5bb0;
+  --focus: #d8ee3a;
+  --f-score: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --f-ui: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html { height: 100%; box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  height: 100%;
+  background: var(--surround);
+  color: var(--cream);
+  font-family: var(--f-ui);
+  overflow: hidden;
+}
+.app {
+  height: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+h1 {
+  margin: 0;
+  font-family: var(--f-ui);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+h1 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ball); box-shadow: 0 0 0 2px rgba(216,238,58,.2); }
+.controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--board-edge);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--board);
+}
+.seg button, .btn {
+  font: 500 13px/1 var(--f-ui);
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  padding: 7px 11px;
+  cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--cream); color: var(--board); }
+.btn {
+  border: 1px solid var(--board-edge);
+  border-radius: 999px;
+  background: var(--board);
+  color: var(--cream);
+}
+.btn:hover, .seg button:hover { color: var(--cream); }
+.seg button[aria-pressed="true"]:hover { color: var(--board); }
+button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.board {
+  background: var(--board);
+  border: 1px solid var(--board-edge);
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: grid;
+  grid-template-columns: 14px 1fr auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+  font-family: var(--f-score);
+}
+.board .hd {
+  font: 600 11px/1 var(--f-score);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+}
+.board .name {
+  font: 500 15px/1.5 var(--f-ui);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 8px;
+}
+.swatch { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.srv { width: 9px; height: 9px; border-radius: 50%; background: var(--ball); visibility: hidden; }
+.srv.on { visibility: visible; }
+.games, .pts {
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.2ch;
+}
+.pts {
+  min-width: 3ch;
+  color: var(--board);
+  background: var(--ball);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.call {
+  grid-column: 1 / -1;
+  font: 500 12px/1.4 var(--f-ui);
+  color: var(--muted);
+  min-height: 1.4em;
+  border-top: 1px solid var(--board-edge);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+}
+canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  display: block;
+}
+.hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+  text-wrap: balance;
+}
+.hint kbd {
+  font: 600 11px/1 var(--f-score);
+  letter-spacing: .04em;
+  color: var(--cream);
+  border: 1px solid var(--board-edge);
+  border-radius: 3px;
+  padding: 1px 5px;
+  background: var(--board);
+}
+@media (max-width: 420px) {
+  h1 { font-size: 15px; }
+  .seg button, .btn { padding: 6px 9px; font-size: 12px; }
+}
+</style>
+
+<div class="app">
+  <div class="top">
+    <h1><span class="dot" aria-hidden="true"></span>草地网球对决</h1>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="对战模式">
+        <button id="m-ai" aria-pressed="true">人机</button>
+        <button id="m-pvp" aria-pressed="false">双人</button>
+      </div>
+      <div class="seg" role="group" aria-label="电脑难度" id="diffSeg">
+        <button id="d-easy" aria-pressed="false">易</button>
+        <button id="d-mid" aria-pressed="true">中</button>
+        <button id="d-hard" aria-pressed="false">难</button>
+      </div>
+      <button class="btn" id="newBtn">新比赛</button>
+      <button class="btn" id="sndBtn" aria-pressed="true">声音 开</button>
+    </div>
+  </div>
+
+  <div class="board" aria-live="polite">
+    <span></span><span class="hd" style="text-align:left">先赢 4 局</span><span class="hd">局</span><span class="hd">分</span>
+    <span class="srv" id="srv1"></span>
+    <span class="name"><span class="swatch" style="background:var(--violet)"></span><span id="name1">电脑</span></span>
+    <span class="games" id="g1">0</span>
+    <span class="pts" id="p1">0</span>
+    <span class="srv" id="srv0"></span>
+    <span class="name"><span class="swatch" style="background:var(--cream)"></span><span id="name0">你</span></span>
+    <span class="games" id="g0">0</span>
+    <span class="pts" id="p0">0</span>
+    <div class="call" id="call">比赛开始，你先发球。</div>
+  </div>
+
+  <div class="stage" id="stage"><canvas id="cv" aria-label="网球场"></canvas></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<script>
+(() => {
+  // ---------- court constants (metres, ITF dimensions) ----------
+  const C = { hw: 4.115, hl: 11.885, svc: 6.40, dw: 5.485, netH: 0.914, g: 9.8 };
+  const ZP = 0.6;           // how much height lifts things up the screen
+  const HS = 7.2;           // human run speed m/s
+  const REACH = 1.35;
+  const DIFF = {
+    easy: { speed: 4.9, react: 0.40, err: 0.17, margin: 1.0, pace: 0 },
+    mid:  { speed: 6.0, react: 0.22, err: 0.08, margin: 0.6, pace: 1.5 },
+    hard: { speed: 7.1, react: 0.10, err: 0.035, margin: 0.35, pace: 3 }
+  };
+  const COLORS = [
+    { shirt: '#f3eedc', shorts: '#1c3a29', cap: '#f3eedc', trim: '#2f6b3a' },
+    { shirt: '#7a5bb0', shorts: '#efe9d6', cap: '#4b3475', trim: '#efe9d6' }
+  ];
+  const sgn = i => (i === 0 ? 1 : -1);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  const settings = { mode: 'ai', diff: 'mid', sound: true };
+  let S;
+
+  const isHuman = i => settings.mode === 'pvp' || i === 0;
+  const nameOf = i => settings.mode === 'pvp' ? (i === 0 ? '玩家 1（下）' : '玩家 2（上）') : (i === 0 ? '你' : '电脑');
+
+  function mkP() { return { x: 0, y: 0, vx: 0, vy: 0, swing: 0, tx: null, ty: null, plan: null, react: 0, aimHint: 0 }; }
+
+  function newMatch() {
+    S = {
+      pts: [0, 0], games: [0, 0], server: 0, serveNo: 1,
+      phase: 'serve', timer: 0, next: null,
+      P: [mkP(), mkP()],
+      ball: { x: 0, y: 0, z: 1, vx: 0, vy: 0, vz: 0 },
+      lastHitter: -1, bounces: 0, isServe: false, serveSide: 1,
+      msg: '', marks: [], trail: [], rally: 0, winner: -1, t: 0
+    };
+    setupServe();
+    updateBoard(nameOf(0) + '先发球。');
+  }
+
+  function setupServe() {
+    const s = S.server, r = 1 - s, ss = sgn(s), P = S.P;
+    const deuce = (S.pts[0] + S.pts[1]) % 2 === 0;
+    const sx = (deuce ? 1 : -1) * ss * 0.9;
+    S.serveSide = -Math.sign(sx);
+    Object.assign(P[s], { x: sx, y: ss * (C.hl + 0.5), vx: 0, vy: 0, plan: null });
+    Object.assign(P[r], { x: S.serveSide * 2.6, y: -ss * (C.hl + 0.4), vx: 0, vy: 0, plan: null });
+    P[0].tx = P[0].ty = P[1].tx = P[1].ty = null;
+    S.phase = 'serve'; S.timer = 0; S.lastHitter = -1; S.bounces = 0; S.isServe = false;
+    S.trail = [];
+    Object.assign(S.ball, { x: sx + ss * 0.0, y: P[s].y - ss * 0.25, z: 1, vx: 0, vy: 0, vz: 0 });
+  }
+
+  // Solve a launch that lands at (tx,ty) after T seconds, lengthening T until it clears the net.
+  function launch(x, y, z, tx, ty, T, clr) {
+    const b = S.ball;
+    let vx, vy, vz;
+    for (let k = 0; k < 14; k++) {
+      vx = (tx - x) / T; vy = (ty - y) / T; vz = (C.g * T * T / 2 - z) / T;
+      const tn = -y / vy;
+      const zn = z + vz * tn - C.g * tn * tn / 2;
+      if (zn >= clr) break;
+      T *= 1.08;
+    }
+    Object.assign(b, { x, y, z, vx, vy, vz });
+  }
+
+  function keyAim(i) {
+    let d = 0;
+    if (settings.mode === 'ai' && i === 0) {
+      if (keys.has('ArrowLeft') || keys.has('KeyA')) d -= 1;
+      if (keys.has('ArrowRight') || keys.has('KeyD')) d += 1;
+    } else if (i === 0) {
+      if (keys.has('ArrowLeft')) d -= 1;
+      if (keys.has('ArrowRight')) d += 1;
+    } else {
+      if (keys.has('KeyA')) d -= 1;
+      if (keys.has('KeyD')) d += 1;
+    }
+    return d;
+  }
+
+  function doServe(aim) {
+    const s = S.server, ss = sgn(s), p = S.P[s], d = DIFF[settings.diff];
+    if (!isHuman(s)) aim = rand(-1, 1);
+    let tx = S.serveSide * 2.15 + clamp(aim, -1, 1) * 1.75;
+    let ty = -ss * rand(4.3, 5.9);
+    const spread = isHuman(s) ? 0.45 : 0.25 + d.err * 2;
+    tx += rand(-spread, spread); ty += -ss * rand(-spread, spread * 0.9);
+    const second = S.serveNo === 2;
+    const T = second ? rand(0.78, 0.86) : rand(0.6, 0.7);
+    launch(p.x, p.y - ss * 0.25, 2.7, tx, ty, T, C.netH + (second ? 0.35 : 0.12));
+    if (!second && Math.random() < (isHuman(s) ? 0.05 : d.err * 0.6)) S.ball.vz *= 0.82; // the odd net cord
+    S.isServe = true; S.lastHitter = s; S.bounces = 0; S.phase = 'rally';
+    p.swing = 0.3;
+    sfx('hit');
+    afterLaunch(s);
+  }
+
+  function hit(i) {
+    const p = S.P[i], b = S.ball, ss = sgn(i), d = DIFF[settings.diff];
+    let tx, ty, speed, netErr = false;
+    if (isHuman(i)) {
+      const aim = clamp(p.vx / HS, -1, 1);
+      tx = aim * 3.0 + (b.x - p.x) * 0.5 + rand(-0.55, 0.55);
+      ty = -ss * rand(7, 10.8);
+      speed = rand(17, 21.5) + Math.min(S.rally, 12) * 0.22;
+    } else {
+      tx = rand(-1, 1) * (C.hw - d.margin);
+      ty = -ss * rand(7, C.hl - d.margin);
+      speed = rand(15, 19.5) + d.pace + Math.min(S.rally, 12) * 0.15;
+      if (Math.random() < d.err) {
+        const k = Math.random();
+        if (k < 0.4) tx = (Math.random() < 0.5 ? -1 : 1) * (C.hw + rand(0.25, 1.2));
+        else if (k < 0.75) ty = -ss * (C.hl + rand(0.3, 1.6));
+        else netErr = true;
+      }
+    }
+    const dist = Math.hypot(tx - b.x, ty - b.y);
+    const T = clamp(dist / speed, 0.72, 1.6);
+    launch(b.x, b.y, Math.max(b.z, 0.4), tx, ty, T, C.netH + 0.22);
+    if (netErr) S.ball.vz *= 0.62;
+    S.lastHitter = i; S.bounces = 0; S.isServe = false; S.rally++;
+    p.swing = 0.3;
+    sfx('hit');
+    afterLaunch(i);
+  }
+
+  function afterLaunch(i) {
+    for (let j = 0; j < 2; j++) {
+      if (j !== i && !isHuman(j)) {
+        S.P[j].plan = predict(j);
+        S.P[j].react = DIFF[settings.diff].react;
+      }
+    }
+  }
+
+  // Where should the computer stand to meet the ball after its bounce?
+  function predict(i) {
+    const b = { ...S.ball }, ss = sgn(i), p = S.P[i], sp = DIFF[settings.diff].speed + 0.3;
+    const dt = 1 / 60;
+    let bounces = 0, last = null;
+    for (let t = 0; t < 3.5; t += dt) {
+      b.vz -= C.g * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
+      if (b.z <= 0 && b.vz < 0) {
+        b.z = 0; b.vz = -b.vz * 0.7; b.vx *= 0.84; b.vy *= 0.84; bounces++;
+        if (bounces >= 2) break;
+      }
+      if (bounces >= 1 && Math.sign(b.y) === ss && b.z < 1.9) {
+        last = { x: b.x, y: b.y };
+        const need = Math.hypot(b.x - p.x, b.y - p.y) / sp + DIFF[settings.diff].react;
+        if (need <= t) return last;
+      }
+    }
+    return last || { x: p.x, y: p.y };
+  }
+
+  function canHit(i) {
+    if (S.phase !== 'rally' || S.lastHitter === i) return false;
+    const b = S.ball;
+    if (Math.sign(b.y) !== sgn(i)) return false;
+    if (S.isServe && S.bounces === 0) return false;
+    if (b.z > 2.4) return false;
+    const p = S.P[i], dx = b.x - p.x, dy = b.y - p.y;
+    return dx * dx + dy * dy < REACH * REACH;
+  }
+
+  function onBounce() {
+    const b = S.ball, owner = b.y > 0 ? 0 : 1;
+    const mark = { x: b.x, y: b.y, t: 2.6, out: false };
+    S.marks.push(mark);
+    if (S.marks.length > 6) S.marks.shift();
+    if (S.bounces === 0) {
+      if (owner === S.lastHitter) return S.isServe ? fault('下网') : point(1 - owner, '下网');
+      const tol = 0.03;
+      const inside = S.isServe
+        ? Math.abs(b.y) <= C.svc + tol && Math.abs(b.x) <= C.hw + tol && b.x * S.serveSide >= -tol
+        : Math.abs(b.y) <= C.hl + tol && Math.abs(b.x) <= C.hw + tol;
+      if (!inside) {
+        mark.out = true;
+        return S.isServe ? fault('出界') : point(owner, '出界');
+      }
+      S.bounces = 1;
+    } else {
+      point(S.lastHitter, S.isServe ? 'Ace！' : '制胜分');
+    }
+  }
+
+  function endPoint(msg, next, wait = 1.7) {
+    S.phase = 'pointover'; S.msg = msg; S.timer = wait; S.next = next;
+  }
+
+  function fault(reason) {
+    if (S.serveNo === 1) {
+      S.serveNo = 2;
+      endPoint('一发' + reason, () => { setupServe(); S.msg = ''; }, 1.3);
+      updateBoard('一发失误（' + reason + '），二发。');
+    } else {
+      point(1 - S.server, '双误');
+    }
+  }
+
+  function point(w, reason) {
+    S.rally = 0;
+    S.pts[w]++;
+    let call = reason + ' · ' + nameOf(w) + '得分';
+    const a = S.pts[w], o = S.pts[1 - w];
+    if (a >= 4 && a - o >= 2) {
+      S.games[w]++;
+      S.pts = [0, 0];
+      S.server = 1 - S.server;
+      if (S.games[w] >= 4) {
+        S.winner = w;
+        S.phase = 'matchover';
+        S.msg = settings.mode === 'ai' ? (w === 0 ? '你赢了！' : '电脑获胜') : nameOf(w) + '获胜！';
+        updateBoard('比赛结束：' + nameOf(w) + ' ' + S.games[w] + '–' + S.games[1 - w] + '。点击球场再来一局。');
+        return;
+      }
+      call = reason + ' · ' + nameOf(w) + '拿下本局，' + nameOf(S.server) + '发球';
+    }
+    S.serveNo = 1;
+    endPoint(reason, () => { setupServe(); S.msg = ''; });
+    updateBoard(call + '。' + deuceNote());
+  }
+
+  function deuceNote() {
+    const [a, b] = S.pts;
+    if (a >= 3 && b >= 3) {
+      if (a === b) return '平分。';
+      return '占先：' + nameOf(a > b ? 0 : 1) + '。';
+    }
+    return '';
+  }
+
+  function ptLabel(i) {
+    const a = S.pts[i], b = S.pts[1 - i];
+    if (a >= 3 && b >= 3) return a === b ? '40' : (a > b ? 'AD' : '40');
+    return ['0', '15', '30', '40'][Math.min(a, 3)];
+  }
+
+  const $ = id => document.getElementById(id);
+  function updateBoard(call) {
+    for (let i = 0; i < 2; i++) {
+      $('name' + i).textContent = nameOf(i);
+      $('g' + i).textContent = S.games[i];
+      $('p' + i).textContent = ptLabel(i);
+      $('srv' + i).classList.toggle('on', S.server === i && S.phase !== 'matchover');
+    }
+    if (call != null) $('call').textContent = call;
+  }
+
+  // ---------- input ----------
+  const keys = new Set();
+  const GAME_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
+  addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('button') && (e.code === 'Space' || e.code === 'Enter')) return;
+    if (GAME_KEYS.includes(e.code)) e.preventDefault();
+    ensureAudio();
+    keys.add(e.code);
+    if (e.repeat) return;
+    if (S.phase === 'matchover' && (e.code === 'Space' || e.code === 'Enter')) { newMatch(); return; }
+    if (S.phase !== 'serve') return;
+    const s = S.server;
+    if (!isHuman(s)) return;
+    const ok = settings.mode === 'ai'
+      ? (e.code === 'Space' || e.code === 'Enter')
+      : (s === 0 ? e.code === 'Enter' : e.code === 'Space');
+    if (ok) doServe(keyAim(s));
+  });
+  addEventListener('keyup', e => keys.delete(e.code));
+  addEventListener('blur', () => keys.clear());
+
+  function keyDir(i) {
+    let x = 0, y = 0;
+    const arrows = () => {
+      if (keys.has('ArrowLeft')) x--; if (keys.has('ArrowRight')) x++;
+      if (keys.has('ArrowUp')) y--; if (keys.has('ArrowDown')) y++;
+    };
+    const wasd = () => {
+      if (keys.has('KeyA')) x--; if (keys.has('KeyD')) x++;
+      if (keys.has('KeyW')) y--; if (keys.has('KeyS')) y++;
+    };
+    if (settings.mode === 'ai') { if (i === 0) { arrows(); wasd(); } }
+    else if (i === 0) arrows(); else wasd();
+    x = clamp(x, -1, 1); y = clamp(y, -1, 1);
+    const m = Math.hypot(x, y);
+    return m > 1 ? { x: x / m, y: y / m } : { x, y };
+  }
+
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let view = { w: 300, h: 600, s: 20, cx: 150, cy: 300, dpr: 1 };
+  const toScreen = (x, y, z = 0) => [view.cx + x * view.s, view.cy + (y - z * ZP) * view.s];
+  const toWorld = (sx, sy) => [(sx - view.cx) / view.s, (sy - view.cy) / view.s];
+
+  const pointers = new Map();
+  function pointerPlayer(sy) {
+    if (settings.mode === 'ai') return 0;
+    return sy < view.cy ? 1 : 0;
+  }
+  cv.addEventListener('pointerdown', e => {
+    ensureAudio();
+    const r = cv.getBoundingClientRect();
+    const sx = e.clientX - r.left, sy = e.clientY - r.top;
+    if (S.phase === 'matchover') { newMatch(); return; }
+    const i = pointerPlayer(sy);
+    if (!isHuman(i)) return;
+    try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    pointers.set(e.pointerId, i);
+    const [wx, wy] = toWorld(sx, sy);
+    const p = S.P[i];
+    if (S.phase === 'serve' && S.server === i) {
+      doServe(clamp((wx - p.x) / 2.5, -1, 1));
+      return;
+    }
+    p.tx = wx; p.ty = wy;
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!pointers.has(e.pointerId)) return;
+    const i = pointers.get(e.pointerId);
+    const r = cv.getBoundingClientRect();
+    const [wx, wy] = toWorld(e.clientX - r.left, e.clientY - r.top);
+    S.P[i].tx = wx; S.P[i].ty = wy;
+  });
+  const endPtr = e => {
+    if (!pointers.has(e.pointerId)) return;
+    const i = pointers.get(e.pointerId);
+    pointers.delete(e.pointerId);
+    S.P[i].tx = S.P[i].ty = null;
+  };
+  cv.addEventListener('pointerup', endPtr);
+  cv.addEventListener('pointercancel', endPtr);
+
+  // ---------- sound ----------
+  let AC = null;
+  function ensureAudio() {
+    if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { AC = null; } }
+    if (AC && AC.state === 'suspended') AC.resume().catch(() => {});
+  }
+  function sfx(kind) {
+    if (!settings.sound || !AC) return;
+    try {
+      const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();
+      const hitK = kind === 'hit';
+      o.type = hitK ? 'triangle' : 'sine';
+      o.frequency.setValueAtTime(hitK ? 560 : 170, t);
+      o.frequency.exponentialRampToValueAtTime(hitK ? 170 : 80, t + 0.08);
+      g.gain.setValueAtTime(hitK ? 0.22 : 0.1, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      o.connect(g).connect(AC.destination);
+      o.start(t); o.stop(t + 0.14);
+    } catch (_) {}
+  }
+
+  // ---------- simulation ----------
+  function movePlayer(i, dt) {
+    const p = S.P[i];
+    let wx = 0, wy = 0, sp = HS;
+    const locked = S.phase === 'serve' && S.server === i;
+    if (isHuman(i)) {
+      const k = keyDir(i);
+      wx = k.x; wy = k.y;
+      if (p.tx != null && !wx && !wy) {
+        const dx = p.tx - p.x, dy = p.ty - p.y, m = Math.hypot(dx, dy);
+        if (m > 0.05) { const f = Math.min(1, m / 0.6); wx = dx / m * f; wy = dy / m * f; }
+      }
+    } else {
+      const d = DIFF[settings.diff];
+      sp = d.speed;
+      let tx = p.x, ty = p.y;
+      const ss = sgn(i);
+      if (S.phase === 'rally' && S.lastHitter !== i && p.plan) {
+        if (p.react > 0) p.react -= dt;
+        else { tx = p.plan.x; ty = p.plan.y; }
+      } else if (S.phase === 'rally' || S.phase === 'pointover') {
+        tx = S.phase === 'rally' ? S.ball.x * 0.25 : 0;
+        ty = ss * (C.hl + 0.7);
+      }
+      const dx = tx - p.x, dy = ty - p.y, m = Math.hypot(dx, dy);
+      if (m > 0.05 && !(S.phase === 'serve')) { const f = Math.min(1, m / 0.5); wx = dx / m * f; wy = dy / m * f; }
+    }
+    if (locked) { wx = 0; wy = 0; }
+    const a = Math.min(1, dt * 14);
+    p.vx += (wx * sp - p.vx) * a;
+    p.vy += (wy * sp - p.vy) * a;
+    p.x = clamp(p.x + p.vx * dt, -7.0, 7.0);
+    const ss = sgn(i);
+    const yMin = 0.7, yMax = C.hl + 3.4;
+    p.y = ss * clamp(ss * (p.y + p.vy * dt), yMin, yMax);
+    if (p.swing > 0) p.swing = Math.max(0, p.swing - dt);
+  }
+
+  function physics(dt) {
+    const b = S.ball, py = b.y;
+    b.vz -= C.g * dt;
+    b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
+    if (py !== 0 && Math.sign(py) !== Math.sign(b.y) && Math.abs(b.x) < C.dw + 0.9 && b.z < C.netH) {
+      b.y = py > 0 ? 0.06 : -0.06;
+      b.vy = -b.vy * 0.12; b.vx *= 0.3;
+      if (S.phase === 'rally') {
+        if (S.isServe) fault('下网'); else point(1 - S.lastHitter, '下网');
+      }
+    }
+    if (b.z <= 0 && b.vz < 0) {
+      const impact = -b.vz;
+      b.z = 0;
+      b.vz = impact > 0.8 ? impact * 0.7 : 0;
+      b.vx *= 0.84; b.vy *= 0.84;
+      if (impact > 2) sfx('bounce');
+      if (impact > 0.8 && S.phase === 'rally') onBounce();
+    }
+    if (b.z === 0 && b.vz === 0) { b.vx *= 0.97; b.vy *= 0.97; }
+    if (S.phase === 'rally') {
+      for (let i = 0; i < 2; i++) if (canHit(i)) { hit(i); break; }
+    }
+  }
+
+  function update(dt) {
+    S.t += dt;
+    for (const m of S.marks) m.t -= dt;
+    S.marks = S.marks.filter(m => m.t > 0);
+
+    if (S.phase === 'pointover') {
+      S.timer -= dt;
+      if (S.timer <= 0 && S.next) { const n = S.next; S.next = null; n(); updateBoard(); }
+    }
+    if (S.phase === 'serve') {
+      const s = S.server, p = S.P[s], ss = sgn(s);
+      S.ball.x = p.x + ss * 0.0;
+      S.ball.y = p.y - ss * 0.25;
+      S.ball.z = 1.0 + Math.abs(Math.sin(S.t * 3)) * 0.35;
+      if (!isHuman(s)) { S.timer += dt; if (S.timer > 1.1) doServe(0); }
+    }
+    for (let i = 0; i < 2; i++) movePlayer(i, dt);
+    if (S.phase !== 'serve') {
+      const n = 4;
+      for (let k = 0; k < n; k++) physics(dt / n);
+      S.trail.push({ x: S.ball.x, y: S.ball.y, z: S.ball.z });
+      if (S.trail.length > 8) S.trail.shift();
+    }
+  }
+
+  // ---------- drawing ----------
+  function resize() {
+    const r = $('stage').getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(r.width * dpr);
+    cv.height = Math.round(r.height * dpr);
+    const s = Math.min(r.width / 14.4, r.height / 31.2);
+    view = { w: r.width, h: r.height, s, cx: r.width / 2, cy: r.height / 2 + 0.25 * s, dpr };
+  }
+
+  function line(x1, y1, x2, y2) {
+    const [a, b] = toScreen(x1, y1), [c, d] = toScreen(x2, y2);
+    ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke();
+  }
+
+  function drawCourt() {
+    const { w, h, s } = view;
+    ctx.fillStyle = '#163d27';
+    ctx.fillRect(0, 0, w, h);
+    // mowing stripes across the whole lawn
+    const band = 1.6;
+    for (let y = -20, k = 0; y < 20; y += band, k++) {
+      const [, sy] = toScreen(0, y);
+      ctx.fillStyle = k % 2 ? '#2e6a3b' : '#347443';
+      ctx.fillRect(0, sy, w, band * s + 1);
+    }
+    // worn turf behind each baseline
+    for (const ss of [1, -1]) {
+      const [cx, cy] = toScreen(0, ss * (C.hl + 0.9));
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 3.4 * s);
+      g.addColorStop(0, 'rgba(176,146,92,0.55)');
+      g.addColorStop(0.6, 'rgba(150,130,80,0.22)');
+      g.addColorStop(1, 'rgba(150,130,80,0)');
+      ctx.fillStyle = g;
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(1.35, 0.55); ctx.translate(-cx, -cy);
+      ctx.beginPath(); ctx.arc(cx, cy, 3.4 * s, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    // lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+    ctx.lineWidth = Math.max(1.4, 0.05 * s);
+    ctx.lineCap = 'square';
+    const { hw, hl, svc, dw } = C;
+    line(-dw, -hl, dw, -hl); line(-dw, hl, dw, hl);
+    line(-dw, -hl, -dw, hl); line(dw, -hl, dw, hl);
+    line(-hw, -hl, -hw, hl); line(hw, -hl, hw, hl);
+    line(-hw, -svc, hw, -svc); line(-hw, svc, hw, svc);
+    line(0, -svc, 0, svc);
+    line(0, hl, 0, hl - 0.15); line(0, -hl, 0, -hl + 0.15);
+  }
+
+  function drawNet() {
+    const s = view.s, half = C.dw + 0.914;
+    const [x0, y0] = toScreen(-half, 0);
+    const [x1] = toScreen(half, 0);
+    const top = y0 - C.netH * ZP * s;
+    // shadow on the near side
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.fillRect(x0, y0, x1 - x0, 0.45 * s);
+    // mesh
+    ctx.fillStyle = 'rgba(15,22,18,0.55)';
+    ctx.fillRect(x0, top, x1 - x0, y0 - top);
+    ctx.strokeStyle = 'rgba(230,235,225,0.18)';
+    ctx.lineWidth = 1;
+    const step = Math.max(3, 0.12 * s);
+    ctx.beginPath();
+    for (let x = x0; x <= x1; x += step) { ctx.moveTo(x, top); ctx.lineTo(x, y0); }
+    for (let y = top; y <= y0; y += step) { ctx.moveTo(x0, y); ctx.lineTo(x1, y); }
+    ctx.stroke();
+    // tape
+    ctx.fillStyle = '#f4f2ea';
+    ctx.fillRect(x0, top - 1.5, x1 - x0, Math.max(2.5, 0.07 * s));
+    // posts
+    ctx.fillStyle = '#20402e';
+    for (const px of [x0, x1]) ctx.fillRect(px - 0.09 * s, top - 2, 0.18 * s, y0 - top + 2);
+  }
+
+  function drawPlayer(i) {
+    const p = S.P[i], s = view.s, c = COLORS[i], ss = sgn(i);
+    const fs = ss; // forehand side on screen: bottom player → right, top player → left
+    const [gx, gy] = toScreen(p.x, p.y);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(gx, gy, 0.42 * s, 0.2 * s, 0, 0, Math.PI * 2); ctx.fill();
+    const hip = toScreen(p.x, p.y, 0.9)[1];
+    const sh = toScreen(p.x, p.y, 1.45)[1];
+    const head = toScreen(p.x, p.y, 1.72)[1];
+    const run = Math.hypot(p.vx, p.vy) > 0.5 ? Math.sin(S.t * 18) * 0.12 * s : 0;
+    // legs
+    ctx.strokeStyle = '#2a2a24'; ctx.lineWidth = Math.max(2, 0.11 * s); ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(gx - 0.12 * s + run, gy); ctx.lineTo(gx - 0.08 * s, hip);
+    ctx.moveTo(gx + 0.12 * s - run, gy); ctx.lineTo(gx + 0.08 * s, hip);
+    ctx.stroke();
+    // shorts
+    ctx.fillStyle = c.shorts;
+    ctx.fillRect(gx - 0.2 * s, hip - 0.12 * s, 0.4 * s, 0.22 * s);
+    // racket arm and racket
+    const swingP = p.swing > 0 ? 1 - p.swing / 0.3 : 0;
+    const base = -0.5;                 // resting: out to the forehand side, slightly up-court
+    const ang = base + Math.sin(swingP * Math.PI) * -1.6;
+    const ax = gx + fs * 0.22 * s, ay = sh + 0.12 * s;
+    const dirx = Math.cos(ang) * fs, diry = Math.sin(ang) * ss;
+    const hx = ax + dirx * 0.45 * s, hy = ay + diry * 0.45 * s;
+    const rx = hx + dirx * 0.38 * s, ry = hy + diry * 0.38 * s;
+    ctx.strokeStyle = '#d9c9a8'; ctx.lineWidth = Math.max(1.5, 0.07 * s);
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.strokeStyle = '#1b1b1b'; ctx.lineWidth = Math.max(1.5, 0.05 * s);
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(rx, ry); ctx.stroke();
+    ctx.save();
+    ctx.translate(rx + dirx * 0.14 * s, ry + diry * 0.14 * s);
+    ctx.rotate(Math.atan2(diry, dirx));
+    ctx.fillStyle = 'rgba(240,240,230,0.35)';
+    ctx.strokeStyle = '#1b1b1b';
+    ctx.beginPath(); ctx.ellipse(0, 0, 0.17 * s, 0.12 * s, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    // torso
+    ctx.fillStyle = c.shirt;
+    ctx.strokeStyle = c.trim; ctx.lineWidth = 1;
+    ctx.beginPath();
+    const tw = 0.27 * s;
+    ctx.moveTo(gx - tw, sh); ctx.lineTo(gx + tw, sh);
+    ctx.lineTo(gx + tw * 0.8, hip - 0.1 * s); ctx.lineTo(gx - tw * 0.8, hip - 0.1 * s);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // head with cap
+    ctx.fillStyle = c.cap;
+    ctx.beginPath(); ctx.arc(gx, head, 0.15 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = c.trim;
+    ctx.beginPath(); ctx.ellipse(gx, head - ss * 0.12 * s, 0.12 * s, 0.05 * s, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawBallShadow() {
+    const b = S.ball, s = view.s;
+    const [x, y] = toScreen(b.x, b.y);
+    const k = Math.max(0.35, 1 - b.z * 0.15);
+    ctx.fillStyle = `rgba(0,0,0,${0.32 * k})`;
+    ctx.beginPath(); ctx.ellipse(x, y, Math.max(3, 0.16 * s), Math.max(1.6, 0.08 * s), 0, 0, Math.PI * 2); ctx.fill();
+  }
+  function drawBall() {
+    const b = S.ball, s = view.s;
+    const r = Math.max(3.2, 0.15 * s) * (1 + b.z * 0.04);
+    if (S.phase !== 'serve') {
+      for (let k = 0; k < S.trail.length; k++) {
+        const t = S.trail[k];
+        const [tx, ty] = toScreen(t.x, t.y, t.z);
+        ctx.fillStyle = `rgba(216,238,58,${0.05 + k * 0.035})`;
+        ctx.beginPath(); ctx.arc(tx, ty, r * (0.5 + k * 0.05), 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    const [x, y] = toScreen(b.x, b.y, b.z);
+    ctx.fillStyle = '#d8ee3a';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(x - r * 0.9, y, r * 0.8, -0.9, 0.9); ctx.stroke();
+  }
+
+  function drawMarks() {
+    const s = view.s;
+    for (const m of S.marks) {
+      const [x, y] = toScreen(m.x, m.y);
+      const a = Math.min(1, m.t / 0.8);
+      ctx.fillStyle = `rgba(120,96,58,${0.55 * a})`;
+      ctx.beginPath(); ctx.ellipse(x, y, 0.17 * s, 0.09 * s, 0, 0, Math.PI * 2); ctx.fill();
+      if (m.out) {
+        ctx.strokeStyle = `rgba(255,94,77,${a})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(x, y, 0.45 * s, 0.3 * s, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = `rgba(255,94,77,${a})`;
+        ctx.font = `700 ${Math.max(12, 0.55 * s)}px "Barlow Condensed", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('OUT', x, y - 0.45 * s);
+      }
+    }
+  }
+
+  function pill(text, x, y, size, bg, fg) {
+    ctx.font = `600 ${size}px "Noto Sans SC", "PingFang SC", sans-serif`;
+    const w = ctx.measureText(text).width + size * 1.4, h = size * 1.9;
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2); else ctx.rect(x - w / 2, y - h / 2, w, h);
+    ctx.fill();
+    ctx.fillStyle = fg;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y + 1);
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  function drawOverlay() {
+    const s = view.s;
+    if (S.phase === 'serve' && isHuman(S.server)) {
+      const ss = sgn(S.server);
+      const [x, y] = toScreen(0, ss * (C.hl + 2.4));
+      let t;
+      if (settings.mode === 'ai') t = '点击球场或按 空格 发球';
+      else t = S.server === 0 ? '下方：点击半场或按 Enter 发球' : '上方：点击半场或按 空格 发球';
+      if (S.serveNo === 2) t = '二发 · ' + t;
+      pill(t, x, y, Math.max(12, Math.min(15, 0.5 * s)), 'rgba(13,35,24,0.82)', '#efe9d6');
+    }
+    if ((S.phase === 'pointover' && S.msg) || S.phase === 'matchover') {
+      const [x, y] = toScreen(0, 0);
+      if (S.phase === 'matchover') {
+        pill(S.msg + '  ' + S.games[S.winner] + '–' + S.games[1 - S.winner], x, y - 2.2 * s, Math.max(18, 0.9 * s), '#d8ee3a', '#10301f');
+        pill('点击球场开始新比赛', x, y + 1.6 * s, Math.max(12, 0.48 * s), 'rgba(13,35,24,0.85)', '#efe9d6');
+      } else {
+        pill(S.msg, x, y - 1.8 * s, Math.max(14, 0.65 * s), 'rgba(13,35,24,0.85)', '#efe9d6');
+      }
+    }
+  }
+
+  function draw() {
+    const { dpr } = view;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawCourt();
+    drawMarks();
+    drawBallShadow();
+    const ballFar = S.ball.y < 0;
+    // far half (top) first, then the net, then the near half
+    if (S.P[1]) drawPlayer(1);
+    if (ballFar) drawBall();
+    drawNet();
+    drawPlayer(0);
+    if (!ballFar) drawBall();
+    drawOverlay();
+  }
+
+  // ---------- UI wiring ----------
+  function setHint() {
+    $('hint').innerHTML = settings.mode === 'ai'
+      ? '移动：<kbd>方向键</kbd> / <kbd>WASD</kbd> 或在球场上拖动 · 发球：<kbd>空格</kbd> 或点击 · 靠近来球自动挥拍，击球时左右移动决定球的方向'
+      : '下方：<kbd>方向键</kbd> + <kbd>Enter</kbd> 发球 · 上方：<kbd>WASD</kbd> + <kbd>空格</kbd> 发球 · 手机上两人各自在自己半场拖动';
+    $('diffSeg').hidden = settings.mode !== 'ai';
+  }
+  function setMode(m) {
+    settings.mode = m;
+    $('m-ai').setAttribute('aria-pressed', m === 'ai');
+    $('m-pvp').setAttribute('aria-pressed', m === 'pvp');
+    setHint(); newMatch();
+  }
+  function setDiff(d) {
+    settings.diff = d;
+    for (const k of ['easy', 'mid', 'hard']) $('d-' + k).setAttribute('aria-pressed', k === d);
+    newMatch();
+  }
+  $('m-ai').onclick = () => setMode('ai');
+  $('m-pvp').onclick = () => setMode('pvp');
+  $('d-easy').onclick = () => setDiff('easy');
+  $('d-mid').onclick = () => setDiff('mid');
+  $('d-hard').onclick = () => setDiff('hard');
+  $('newBtn').onclick = () => newMatch();
+  $('sndBtn').onclick = () => {
+    settings.sound = !settings.sound;
+    ensureAudio();
+    $('sndBtn').textContent = settings.sound ? '声音 开' : '声音 关';
+    $('sndBtn').setAttribute('aria-pressed', settings.sound);
+  };
+
+  try { new ResizeObserver(resize).observe($('stage')); } catch (_) { addEventListener('resize', resize); }
+  resize();
+  setHint();
+  newMatch();
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(1 / 30, (now - last) / 1000);
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
